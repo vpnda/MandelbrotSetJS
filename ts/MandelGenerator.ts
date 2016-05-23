@@ -1,8 +1,6 @@
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../typings/modules/es6-promise/index.d.ts" />
 
-var MandelGenerator;
-
-(function () {
+let MandelGenerator = (() => {
     "use strict";
     
     var BOUNDARY : number = 2;
@@ -26,22 +24,19 @@ var MandelGenerator;
      * @param canvas html object on which we are going to render our set
      * @returns Promise to when the rendering finishes
      */
-    function generate(canvas : HTMLCanvasElement , xStart : number, yStart : number, zoomLevel : number) : Promise<Object> {
-        
-        var xEnd = (canvas.width / canvas.height) * (1 / zoomLevel) + xStart;
-        var yEnd = Math.abs(xEnd - xStart) + yStart;
-        
-        var yStep = (yEnd - yStart) / canvas.height;
+    function generate(canvas : HTMLCanvasElement , oPlaneDef : PlaneDefinition ) : Promise<Object> {
+
+        var yStep = (oPlaneDef.yEnd - oPlaneDef.yStart) / canvas.height;
         var xStep = yStep;
         
         var ctx = canvas.getContext("2d");
         
-        var x = xStart;
+        var x = oPlaneDef.xStart;
         for(var i = 0; i < canvas.width; i++) {
             x += xStep;
             (function(x, i){
                 setTimeout(function () {
-                    var y = yStart;
+                    var y = oPlaneDef.yStart;
                     for (var j = 0; j < canvas.height; j++) {
                         y += yStep;
                         var oComplexNumber = new ComplexNumber(x, y);
@@ -90,7 +85,7 @@ var MandelGenerator;
         + Math.pow(oComplexNumber.getImaginaryPart(), 2));
     }
 
-    MandelGenerator = {
+    return {
         generate: generate
     }
 })();
