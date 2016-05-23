@@ -4,6 +4,8 @@ var AxisGenerator = (function () {
         LimitType[LimitType["BOTTOM"] = 0] = "BOTTOM";
         LimitType[LimitType["TOP"] = 1] = "TOP";
         LimitType[LimitType["NONE"] = 2] = "NONE";
+        LimitType[LimitType["LEFT"] = 3] = "LEFT";
+        LimitType[LimitType["RIGHT"] = 4] = "RIGHT";
     })(LimitType || (LimitType = {}));
     /**
      * Border padding settings
@@ -16,6 +18,7 @@ var AxisGenerator = (function () {
     var LINE_COLOR = 'rgb(255,255,255)'; // White color
     var TEXT_COLOR = 'rgb(255,255,255)'; // White color
     var PADDING_BETWEEN_LINE_AND_NUMBERS = 15; // px
+    var FONT_SIZE = 15; // px
     var NUMBER_OF_X_AXIS_STEPS = 10; // number of steps in the X_AXIS
     var PADDING_BEFORE_START_NUMBERING_X_AXIS = 10; // Approximate padding before staring axis
     var PADDING_BEFORE_END_NUMBERING_X_AXIS = 10; // Approximate padding before ending axis
@@ -67,24 +70,23 @@ var AxisGenerator = (function () {
             drawNumbersHorizontally(iCanvasYSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
         }
         function drawNumbersAboveLine(iCanvasYSynthCenter) {
-            drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS + 10);
+            drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS + FONT_SIZE);
         }
         function drawNumbersHorizontally(iCanvasYSynthCenter) {
-            var iAllowablePx = canvas.width - PADDING_BEFORE_START_NUMBERING_X_AXIS - PADDING_BEFORE_END_NUMBERING_X_AXIS;
             var iGetBase = oPlaneDef.xEnd - oPlaneDef.xStart;
             var aNumberArray = getNumberArray(oPlaneDef.xStart, iGetBase);
-            var aPositionArray = getPositionOfNumberArray(aNumberArray);
+            var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.xStart, oPlaneDef.xStep);
             aNumberArray.forEach(function (iNumber, iIndex) {
                 var ctx = canvas.getContext("2d");
                 ctx.font = "15px Arial";
                 ctx.fillStyle = TEXT_COLOR;
-                ctx.fillText(iNumber.toString().substring(0, 5), aPositionArray[iIndex], iCanvasYSynthCenter);
+                ctx.fillText(iNumber, aPositionArray[iIndex], iCanvasYSynthCenter);
             });
         }
-        function getPositionOfNumberArray(aNumberArray) {
+        function getPositionOfNumberArray(aNumberArray, iStartPos, iStep) {
             var aRes = [];
             aNumberArray.forEach(function (fNum) {
-                aRes.push((fNum - oPlaneDef.xStart) / oPlaneDef.xStep);
+                aRes.push((fNum - iStartPos) / iStep);
             });
             return aRes;
         }
@@ -94,7 +96,10 @@ var AxisGenerator = (function () {
             var initalVal = Math.ceil(iInitValue * Math.pow(10, -iBase)) * iInc;
             var aRes = [];
             for (var i = 0; i < NUMBER_OF_X_AXIS_STEPS; i++) {
-                aRes.push(initalVal);
+                var adjustedNum = decimalAdjust(ADJUSTMENT_TYPE.round, initalVal, iBase);
+                if (adjustedNum) {
+                    aRes.push(adjustedNum);
+                }
                 initalVal += iInc;
             }
             return aRes;
@@ -123,12 +128,104 @@ var AxisGenerator = (function () {
                 };
             }
             return {
-                value: Math.abs(oPlaneDef.yStart) / oPlaneDef.yStep,
+                value: Math.abs(oPlaneDef.yEnd) / oPlaneDef.yStep,
                 limit: LimitType.NONE
             };
         }
         function generateYAxis() {
+            var oSyntheticXCenter = getSyntheticXCenter();
+            drawYLine(oSyntheticXCenter.value);
+            switch (oSyntheticXCenter.limit) {
+                case LimitType.RIGHT:
+                    drawNumbersLeftToLine(oSyntheticXCenter.value);
+                    break;
+                case LimitType.NONE:
+                case LimitType.LEFT:
+                    drawNumbersRightToLine(oSyntheticXCenter.value);
+                    break;
+            }
         }
+        function drawNumbersLeftToLine(iCanvasXSynthCenter) {
+            drawNumbersVertically(iCanvasXSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE * 2);
+        }
+        function drawNumbersRightToLine(iCanvasXSynthCenter) {
+            drawNumbersVertically(iCanvasXSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+        }
+        function drawNumbersVertically(iCanvasYSynthCenter) {
+            var iGetBase = oPlaneDef.yEnd - oPlaneDef.yStart;
+            var aNumberArray = getNumberArray(oPlaneDef.yStart, iGetBase);
+            var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.yEnd, -oPlaneDef.yStep);
+            aNumberArray.forEach(function (iNumber, iIndex) {
+                var ctx = canvas.getContext("2d");
+                ctx.font = FONT_SIZE + "px Arial";
+                ctx.fillStyle = TEXT_COLOR;
+                ctx.fillText(iNumber, iCanvasYSynthCenter, aPositionArray[iIndex]);
+            });
+        }
+        function drawYLine(iCanvasXSynthCenter) {
+            var ctx = canvas.getContext("2d");
+            var oldStrokeStyle = ctx.strokeStyle;
+            try {
+                ctx.strokeStyle = LINE_COLOR;
+                ctx.beginPath();
+                ctx.moveTo(iCanvasXSynthCenter, 0);
+                ctx.lineTo(iCanvasXSynthCenter, canvas.height);
+                ctx.stroke();
+            }
+            finally {
+                ctx.strokeStyle = oldStrokeStyle;
+            }
+        }
+        function getSyntheticXCenter() {
+            if (oPlaneDef.xStart + LINE_PADDING * oPlaneDef.xStep >= 0) {
+                return {
+                    value: LINE_PADDING,
+                    limit: LimitType.LEFT
+                };
+            }
+            if (oPlaneDef.xEnd - LINE_PADDING * oPlaneDef.xStep <= 0) {
+                return {
+                    value: canvas.width - LINE_PADDING,
+                    limit: LimitType.RIGHT
+                };
+            }
+            return {
+                value: Math.abs(oPlaneDef.xStart) / oPlaneDef.xStep,
+                limit: LimitType.NONE
+            };
+        }
+    }
+    var ADJUSTMENT_TYPE;
+    (function (ADJUSTMENT_TYPE) {
+        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE['ciel'] = 0] = 'ciel';
+        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE['round'] = 1] = 'round';
+        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE['floor'] = 2] = 'floor';
+    })(ADJUSTMENT_TYPE || (ADJUSTMENT_TYPE = {}));
+    /**
+     * Decimal adjustment of a number.
+     * Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/ceil
+     * @param {String}  type  The type of adjustment.
+     * @param {Number}  value The number.
+     * @param {Integer} exp   The exponent (the 10 logarithm of the adjustment base).
+     * @returns {Number} The adjusted value.
+     */
+    function decimalAdjust(type, value, exp) {
+        // If the exp is undefined or zero...
+        if (typeof exp === 'undefined' || +exp === 0) {
+            return Math[ADJUSTMENT_TYPE[type]](value);
+        }
+        value = +value;
+        exp = +exp;
+        // If the value is not a number or the exp is not an integer...
+        if (isNaN(value) || !(typeof exp === 'number' && exp % 1 === 0)) {
+            return NaN;
+        }
+        // Shift
+        value = value.toString().split('e');
+        value = Math[ADJUSTMENT_TYPE[type]](+(value[0] + 'e' + (value[1] ? (+value[1] - exp) : -exp)));
+        // Shift back
+        value = value.toString().split('e');
+        return +(value[0] + 'e' + (value[1] ? (+value[1] + exp) : exp));
     }
     return {
         generate: generate

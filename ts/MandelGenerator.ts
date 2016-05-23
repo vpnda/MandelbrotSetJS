@@ -34,7 +34,7 @@ let MandelGenerator = (() => {
             (function(x, i){
                 setTimeout(function () {
                     var y = oPlaneDef.yStart;
-                    for (var j = 0; j < canvas.height; j++) {
+                    for (var j = canvas.height-1; j >= 0; j--) {
                         y += oPlaneDef.yStep;
                         var oComplexNumber = new ComplexNumber(x, y);
                         var depth = processPoint(oComplexNumber);

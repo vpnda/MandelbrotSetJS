@@ -3,7 +3,9 @@ let AxisGenerator = (() => {
     enum LimitType {
         "BOTTOM",
         "TOP",
-        "NONE"
+        "NONE",
+        "LEFT",
+        "RIGHT"
     }
 
     /**
@@ -18,7 +20,8 @@ let AxisGenerator = (() => {
     let LINE_COLOR = 'rgb(255,255,255)'             // White color
     let TEXT_COLOR = 'rgb(255,255,255)'             // White color
     let PADDING_BETWEEN_LINE_AND_NUMBERS = 15;      // px
-    
+    let FONT_SIZE = 15;                             // px
+
     let NUMBER_OF_X_AXIS_STEPS = 10;                // number of steps in the X_AXIS
     let PADDING_BEFORE_START_NUMBERING_X_AXIS = 10; // Approximate padding before staring axis
     let PADDING_BEFORE_END_NUMBERING_X_AXIS = 10;   // Approximate padding before ending axis
@@ -45,7 +48,7 @@ let AxisGenerator = (() => {
      * Private method to generate the canvas element
      */
     function _generate(canvas: HTMLCanvasElement, oPlaneDef: PlaneDefinition) {
-        
+
         generateXAxis();
         generateYAxis();
 
@@ -82,52 +85,53 @@ let AxisGenerator = (() => {
         }
 
         function drawNumbersAboveLine(iCanvasYSynthCenter: number) {
-            drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS + 10);
+            drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS + FONT_SIZE);
         }
-        
+
         function drawNumbersHorizontally(iCanvasYSynthCenter: number) {
-            var iAllowablePx = canvas.width - PADDING_BEFORE_START_NUMBERING_X_AXIS - PADDING_BEFORE_END_NUMBERING_X_AXIS;
-            
             var iGetBase = oPlaneDef.xEnd - oPlaneDef.xStart;
             var aNumberArray = getNumberArray(oPlaneDef.xStart, iGetBase);
-            var aPositionArray = getPositionOfNumberArray(aNumberArray);
-            
+            var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.xStart, oPlaneDef.xStep);
+
             aNumberArray.forEach((iNumber, iIndex) => {
                 var ctx = canvas.getContext("2d");
                 ctx.font = "15px Arial";
                 ctx.fillStyle = TEXT_COLOR;
-                ctx.fillText(iNumber.toString().substring(0,5), aPositionArray[iIndex], iCanvasYSynthCenter);
+                ctx.fillText(iNumber, aPositionArray[iIndex], iCanvasYSynthCenter);
             });
         }
-        
-        function getPositionOfNumberArray(aNumberArray : number[]) {
+
+        function getPositionOfNumberArray(aNumberArray: number[], iStartPos : number, iStep : number) {
             var aRes = [];
             aNumberArray.forEach((fNum: number) => {
-               aRes.push((fNum - oPlaneDef.xStart) / oPlaneDef.xStep);
+                aRes.push((fNum - iStartPos) / iStep);
             });
             return aRes;
         }
-        
+
         function getNumberArray(iInitValue, iNumberToGetBase) {
             var iBase = getBaseOfNumber(iNumberToGetBase);
             var iInc = Math.pow(10, iBase);
             var initalVal = Math.ceil(iInitValue * Math.pow(10, - iBase)) * iInc;
             var aRes = [];
-            for(var i = 0; i < NUMBER_OF_X_AXIS_STEPS; i++) {
-                aRes.push(initalVal);
+            for (var i = 0; i < NUMBER_OF_X_AXIS_STEPS; i++) {
+                var adjustedNum = decimalAdjust(ADJUSTMENT_TYPE.round, initalVal, iBase);
+                if(adjustedNum){ // ignore zero
+                    aRes.push(adjustedNum);
+                }
                 initalVal += iInc;
             }
             return aRes;
         }
-        
-        function getBaseOfNumber(num : number) {
+
+        function getBaseOfNumber(num: number) {
             num = Math.abs(num);
-            if(num < 10 && num >= 1){
+            if (num < 10 && num >= 1) {
                 return 0;
-            }else if(num < 1){
+            } else if (num < 1) {
                 return -1 + getBaseOfNumber(num * 10);
             }
-            return 1 + getBaseOfNumber (num / 10);
+            return 1 + getBaseOfNumber(num / 10);
         }
 
         function getSyntheticYCenter(): SyntheticCenter {
@@ -144,17 +148,114 @@ let AxisGenerator = (() => {
                 }
             }
             return {
-                value: Math.abs(oPlaneDef.yStart) / oPlaneDef.yStep ,
+                value: Math.abs(oPlaneDef.yEnd) / oPlaneDef.yStep,
+                limit: LimitType.NONE
+            };
+        }
+        
+        function generateYAxis() {
+            var oSyntheticXCenter: SyntheticCenter = getSyntheticXCenter();
+            drawYLine(oSyntheticXCenter.value);
+            switch (oSyntheticXCenter.limit) {
+                case LimitType.RIGHT:
+                    drawNumbersLeftToLine(oSyntheticXCenter.value);
+                    break;
+                case LimitType.NONE:
+                case LimitType.LEFT:
+                    drawNumbersRightToLine(oSyntheticXCenter.value);
+                    break;
+            }
+        }
+        
+        function drawNumbersLeftToLine(iCanvasXSynthCenter: number) {
+            drawNumbersVertically(iCanvasXSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE * 2);
+        }
+        
+        function drawNumbersRightToLine(iCanvasXSynthCenter: number) {
+            drawNumbersVertically(iCanvasXSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+        }
+        
+        function drawNumbersVertically(iCanvasYSynthCenter: number) {
+            var iGetBase = oPlaneDef.yEnd - oPlaneDef.yStart;
+            var aNumberArray = getNumberArray(oPlaneDef.yStart, iGetBase);
+            var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.yEnd, -oPlaneDef.yStep);
+
+            aNumberArray.forEach((iNumber, iIndex) => {
+                var ctx = canvas.getContext("2d");
+                ctx.font = FONT_SIZE + "px Arial";
+                ctx.fillStyle = TEXT_COLOR;
+                ctx.fillText(iNumber, iCanvasYSynthCenter, aPositionArray[iIndex]);
+            });
+        }
+        
+        function drawYLine(iCanvasXSynthCenter: number) {
+            var ctx = canvas.getContext("2d");
+            var oldStrokeStyle = ctx.strokeStyle;
+            try {
+                ctx.strokeStyle = LINE_COLOR;
+                ctx.beginPath();
+                ctx.moveTo(iCanvasXSynthCenter, 0);
+                ctx.lineTo(iCanvasXSynthCenter, canvas.height);
+                ctx.stroke();
+            } finally {
+                ctx.strokeStyle = oldStrokeStyle;
+            }
+        }
+        
+        function getSyntheticXCenter(): SyntheticCenter {
+            if (oPlaneDef.xStart + LINE_PADDING * oPlaneDef.xStep >= 0) {
+                return {
+                    value: LINE_PADDING,
+                    limit: LimitType.LEFT
+                }
+            }
+            if (oPlaneDef.xEnd - LINE_PADDING * oPlaneDef.xStep <= 0) {
+                return {
+                    value: canvas.width - LINE_PADDING,
+                    limit: LimitType.RIGHT
+                }
+            }
+            return {
+                value: Math.abs(oPlaneDef.xStart) / oPlaneDef.xStep,
                 limit: LimitType.NONE
             };
         }
 
-        function generateYAxis() {
-
-        }
-
     }
     
+    enum ADJUSTMENT_TYPE {
+        'ciel',
+        'round',
+        'floor'
+    }
+
+    /**
+     * Decimal adjustment of a number.
+     * Source: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/ceil
+     * @param {String}  type  The type of adjustment.
+     * @param {Number}  value The number.
+     * @param {Integer} exp   The exponent (the 10 logarithm of the adjustment base).
+     * @returns {Number} The adjusted value.
+     */
+    function decimalAdjust(type : ADJUSTMENT_TYPE, value : any, exp : number) : number {
+        // If the exp is undefined or zero...
+        if (typeof exp === 'undefined' || +exp === 0) {
+            return Math[ADJUSTMENT_TYPE[type]](value);
+        }
+        value = +value;
+        exp = +exp;
+        // If the value is not a number or the exp is not an integer...
+        if (isNaN(value) || !(typeof exp === 'number' && exp % 1 === 0)) {
+            return NaN;
+        }
+        // Shift
+        value = value.toString().split('e');
+        value = Math[ADJUSTMENT_TYPE[type]](+(value[0] + 'e' + (value[1] ? (+value[1] - exp) : -exp)));
+        // Shift back
+        value = value.toString().split('e');
+        return +(value[0] + 'e' + (value[1] ? (+value[1] + exp) : exp));
+    }
+
     return {
         generate: generate
     };
