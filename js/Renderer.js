@@ -8,11 +8,16 @@ var PlaneDefinition = (function () {
         this.yStart = yStart;
         this.xEnd = xEnd;
         this.yEnd = yEnd;
-        if (xEnd === undefined) {
-            this.xEnd = (canvas.width / canvas.height) * (1 / zoomLevel) + xStart;
-        }
         if (yEnd === undefined) {
-            this.yEnd = Math.abs(this.xEnd - xStart) + yStart;
+            this.yEnd = (canvas.height / canvas.width) * 1 / zoomLevel + yStart;
+        }
+        this.yStep = (this.yEnd - this.yStart) / canvas.height;
+        if (xEnd === undefined) {
+            this.xStep = this.yStep; // to set a uniform scale
+            this.xEnd = this.xStep * canvas.width + this.xStart;
+        }
+        else {
+            this.xStep = (this.xEnd - this.xStart) / canvas.width;
         }
     }
     return PlaneDefinition;
@@ -25,13 +30,13 @@ var Renderer;
         document.body.appendChild(canvas);
         canvas.height = Math.max(document.documentElement.clientHeight, 0);
         canvas.width = Math.max(document.documentElement.clientWidth, 0);
-        var oPlaneDefinition = new PlaneDefinition(canvas, 1, -2, -1);
+        var oPlaneDefinition = new PlaneDefinition(canvas, 0.25, -2, -1);
         var renderPromise = render(canvas, oPlaneDefinition);
         renderPromise.then(function () {
             setTimeout(function () {
-                var oPlaneDefinition = new PlaneDefinition(canvas, 50, -0.912, -0.27);
+                var oPlaneDefinition = new PlaneDefinition(canvas, 30, -1.05, -0.35);
                 render(canvas, oPlaneDefinition);
-            }, 10000);
+            }, 100);
         });
         return canvas;
     }

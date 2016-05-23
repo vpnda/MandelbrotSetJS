@@ -24,17 +24,15 @@ var MandelGenerator = (function () {
      * @returns Promise to when the rendering finishes
      */
     function generate(canvas, oPlaneDef) {
-        var yStep = (oPlaneDef.yEnd - oPlaneDef.yStart) / canvas.height;
-        var xStep = yStep;
         var ctx = canvas.getContext("2d");
         var x = oPlaneDef.xStart;
         for (var i = 0; i < canvas.width; i++) {
-            x += xStep;
+            x += oPlaneDef.xStep;
             (function (x, i) {
                 setTimeout(function () {
                     var y = oPlaneDef.yStart;
                     for (var j = 0; j < canvas.height; j++) {
-                        y += yStep;
+                        y += oPlaneDef.yStep;
                         var oComplexNumber = new ComplexNumber(x, y);
                         var depth = processPoint(oComplexNumber);
                         ctx.fillStyle = "rgb(0, 0, " + Math.floor(depth * (255 / (MAX_ITERATIONS + 1))) + ")";
