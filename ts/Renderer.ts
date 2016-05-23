@@ -33,7 +33,7 @@ var Renderer;
         var renderPromise = render(canvas, oPlaneDefinition);
         renderPromise.then(function () {
             setTimeout(function () {
-                var oPlaneDefinition = new PlaneDefinition(canvas, 30, -1.05, -0.35)
+                var oPlaneDefinition = new PlaneDefinition(canvas, 70, -0.937, 0.286)
                 render(canvas, oPlaneDefinition);
             }, 100);
         })
@@ -43,7 +43,7 @@ var Renderer;
     function render(canvas, oPlaneDefinition) {
         var oMandelRenderPromise = MandelGenerator.generate(canvas, oPlaneDefinition);
         oMandelRenderPromise.then(() => {
-            AxisGenerator.generate(canvas, oPlaneDefinition);
+            AxisGenerator.generate(canvas, oPlaneDefinition, true);
         });
         return oMandelRenderPromise
     }

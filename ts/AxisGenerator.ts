@@ -19,12 +19,11 @@ let AxisGenerator = (() => {
     let LINE_WIDTH = 2;                             // px
     let LINE_COLOR = 'rgb(255,255,255)'             // White color
     let TEXT_COLOR = 'rgb(255,255,255)'             // White color
-    let PADDING_BETWEEN_LINE_AND_NUMBERS = 15;      // px
+    let PADDING_BETWEEN_LINE_AND_NUMBERS = 5;     // px
+    let NUMBER_OF_NUMS = 3;
     let FONT_SIZE = 15;                             // px
 
     let NUMBER_OF_X_AXIS_STEPS = 10;                // number of steps in the X_AXIS
-    let PADDING_BEFORE_START_NUMBERING_X_AXIS = 10; // Approximate padding before staring axis
-    let PADDING_BEFORE_END_NUMBERING_X_AXIS = 10;   // Approximate padding before ending axis
 
 
     interface SyntheticCenter {
@@ -38,11 +37,15 @@ let AxisGenerator = (() => {
      * @param oPlaneDef PlaneDefinition
      * @return Promise that will resolve once the rendering of this element finishes
      */
-
-    function generate(canvas: HTMLCanvasElement, oPlaneDef: PlaneDefinition) {
-        setTimeout(() => {
+    function generate(canvas: HTMLCanvasElement, oPlaneDef: PlaneDefinition, bAsync?: boolean) {
+        if (bAsync) {
+            setTimeout(() => {
+                _generate(canvas, oPlaneDef);
+            });
+        } else {
             _generate(canvas, oPlaneDef);
-        });
+        }
+
     }
     /**
      * Private method to generate the canvas element
@@ -81,11 +84,13 @@ let AxisGenerator = (() => {
         }
 
         function drawNumbersBelowLine(iCanvasYSynthCenter: number) {
-            drawNumbersHorizontally(iCanvasYSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            var aPosArray = drawNumbersHorizontally(iCanvasYSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            drawGridXLines(aPosArray, iCanvasYSynthCenter);
         }
 
         function drawNumbersAboveLine(iCanvasYSynthCenter: number) {
-            drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS + FONT_SIZE);
+            var aPosArray = drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE);
+            drawGridXLines(aPosArray, iCanvasYSynthCenter);
         }
 
         function drawNumbersHorizontally(iCanvasYSynthCenter: number) {
@@ -97,11 +102,12 @@ let AxisGenerator = (() => {
                 var ctx = canvas.getContext("2d");
                 ctx.font = "15px Arial";
                 ctx.fillStyle = TEXT_COLOR;
-                ctx.fillText(iNumber, aPositionArray[iIndex], iCanvasYSynthCenter);
+                ctx.fillText(iNumber, aPositionArray[iIndex] - FONT_SIZE / 2, iCanvasYSynthCenter);
             });
+            return aPositionArray;
         }
 
-        function getPositionOfNumberArray(aNumberArray: number[], iStartPos : number, iStep : number) {
+        function getPositionOfNumberArray(aNumberArray: number[], iStartPos: number, iStep: number) {
             var aRes = [];
             aNumberArray.forEach((fNum: number) => {
                 aRes.push((fNum - iStartPos) / iStep);
@@ -116,7 +122,7 @@ let AxisGenerator = (() => {
             var aRes = [];
             for (var i = 0; i < NUMBER_OF_X_AXIS_STEPS; i++) {
                 var adjustedNum = decimalAdjust(ADJUSTMENT_TYPE.round, initalVal, iBase);
-                if(adjustedNum){ // ignore zero
+                if (adjustedNum) { // ignore zero
                     aRes.push(adjustedNum);
                 }
                 initalVal += iInc;
@@ -152,7 +158,7 @@ let AxisGenerator = (() => {
                 limit: LimitType.NONE
             };
         }
-        
+
         function generateYAxis() {
             var oSyntheticXCenter: SyntheticCenter = getSyntheticXCenter();
             drawYLine(oSyntheticXCenter.value);
@@ -166,16 +172,31 @@ let AxisGenerator = (() => {
                     break;
             }
         }
-        
+
         function drawNumbersLeftToLine(iCanvasXSynthCenter: number) {
-            drawNumbersVertically(iCanvasXSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE * 2);
+            var aPosArray = drawNumbersVertically(iCanvasXSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE * NUMBER_OF_NUMS);
+            drawGridYLines(aPosArray, iCanvasXSynthCenter);
         }
-        
+
         function drawNumbersRightToLine(iCanvasXSynthCenter: number) {
-            drawNumbersVertically(iCanvasXSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            var aPosArray = drawNumbersVertically(iCanvasXSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            drawGridYLines(aPosArray, iCanvasXSynthCenter);
         }
-        
-        function drawNumbersVertically(iCanvasYSynthCenter: number) {
+
+        function drawGridYLines(aPosArray: number[], iCanvasXSynthCenter: number) {
+            var ctx = canvas.getContext("2d");
+            var oldStrokeStyle = ctx.fillStyle;
+            ctx.strokeStyle = LINE_COLOR;
+            aPosArray.forEach((iPosition) => {
+                ctx.beginPath();
+                ctx.moveTo(iCanvasXSynthCenter - 5, iPosition);
+                ctx.lineTo(iCanvasXSynthCenter + 5, iPosition);
+                ctx.stroke();
+            });
+            ctx.strokeStyle = oldStrokeStyle;
+        }
+
+        function drawNumbersVertically(iCanvasXSynthCenter: number) {
             var iGetBase = oPlaneDef.yEnd - oPlaneDef.yStart;
             var aNumberArray = getNumberArray(oPlaneDef.yStart, iGetBase);
             var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.yEnd, -oPlaneDef.yStep);
@@ -184,10 +205,24 @@ let AxisGenerator = (() => {
                 var ctx = canvas.getContext("2d");
                 ctx.font = FONT_SIZE + "px Arial";
                 ctx.fillStyle = TEXT_COLOR;
-                ctx.fillText(iNumber, iCanvasYSynthCenter, aPositionArray[iIndex]);
+                ctx.fillText(iNumber, iCanvasXSynthCenter, aPositionArray[iIndex] + FONT_SIZE / 2);
             });
+            return aPositionArray;
         }
         
+        function drawGridXLines(aPosArray: number[], iCanvasYSynthCenter: number) {
+            var ctx = canvas.getContext("2d");
+            var oldStrokeStyle = ctx.fillStyle;
+            ctx.strokeStyle = LINE_COLOR;
+            aPosArray.forEach((iPosition) => {
+                ctx.beginPath();
+                ctx.moveTo(iPosition, iCanvasYSynthCenter - 5);
+                ctx.lineTo(iPosition, iCanvasYSynthCenter + 5);
+                ctx.stroke();
+            });
+            ctx.strokeStyle = oldStrokeStyle;
+        }
+
         function drawYLine(iCanvasXSynthCenter: number) {
             var ctx = canvas.getContext("2d");
             var oldStrokeStyle = ctx.strokeStyle;
@@ -201,7 +236,7 @@ let AxisGenerator = (() => {
                 ctx.strokeStyle = oldStrokeStyle;
             }
         }
-        
+
         function getSyntheticXCenter(): SyntheticCenter {
             if (oPlaneDef.xStart + LINE_PADDING * oPlaneDef.xStep >= 0) {
                 return {
@@ -222,7 +257,7 @@ let AxisGenerator = (() => {
         }
 
     }
-    
+
     enum ADJUSTMENT_TYPE {
         'ciel',
         'round',
@@ -237,7 +272,7 @@ let AxisGenerator = (() => {
      * @param {Integer} exp   The exponent (the 10 logarithm of the adjustment base).
      * @returns {Number} The adjusted value.
      */
-    function decimalAdjust(type : ADJUSTMENT_TYPE, value : any, exp : number) : number {
+    function decimalAdjust(type: ADJUSTMENT_TYPE, value: any, exp: number): number {
         // If the exp is undefined or zero...
         if (typeof exp === 'undefined' || +exp === 0) {
             return Math[ADJUSTMENT_TYPE[type]](value);

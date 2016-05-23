@@ -17,21 +17,25 @@ var AxisGenerator = (function () {
     var LINE_WIDTH = 2; // px
     var LINE_COLOR = 'rgb(255,255,255)'; // White color
     var TEXT_COLOR = 'rgb(255,255,255)'; // White color
-    var PADDING_BETWEEN_LINE_AND_NUMBERS = 15; // px
+    var PADDING_BETWEEN_LINE_AND_NUMBERS = 5; // px
+    var NUMBER_OF_NUMS = 3;
     var FONT_SIZE = 15; // px
     var NUMBER_OF_X_AXIS_STEPS = 10; // number of steps in the X_AXIS
-    var PADDING_BEFORE_START_NUMBERING_X_AXIS = 10; // Approximate padding before staring axis
-    var PADDING_BEFORE_END_NUMBERING_X_AXIS = 10; // Approximate padding before ending axis
     /**
      * Generates a basic line in the canvas with given a plane definition
      * @param canvas HTMLCanvasElement
      * @param oPlaneDef PlaneDefinition
      * @return Promise that will resolve once the rendering of this element finishes
      */
-    function generate(canvas, oPlaneDef) {
-        setTimeout(function () {
+    function generate(canvas, oPlaneDef, bAsync) {
+        if (bAsync) {
+            setTimeout(function () {
+                _generate(canvas, oPlaneDef);
+            });
+        }
+        else {
             _generate(canvas, oPlaneDef);
-        });
+        }
     }
     /**
      * Private method to generate the canvas element
@@ -67,10 +71,12 @@ var AxisGenerator = (function () {
             }
         }
         function drawNumbersBelowLine(iCanvasYSynthCenter) {
-            drawNumbersHorizontally(iCanvasYSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            var aPosArray = drawNumbersHorizontally(iCanvasYSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            drawGridXLines(aPosArray, iCanvasYSynthCenter);
         }
         function drawNumbersAboveLine(iCanvasYSynthCenter) {
-            drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS + FONT_SIZE);
+            var aPosArray = drawNumbersHorizontally(iCanvasYSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE);
+            drawGridXLines(aPosArray, iCanvasYSynthCenter);
         }
         function drawNumbersHorizontally(iCanvasYSynthCenter) {
             var iGetBase = oPlaneDef.xEnd - oPlaneDef.xStart;
@@ -80,8 +86,9 @@ var AxisGenerator = (function () {
                 var ctx = canvas.getContext("2d");
                 ctx.font = "15px Arial";
                 ctx.fillStyle = TEXT_COLOR;
-                ctx.fillText(iNumber, aPositionArray[iIndex], iCanvasYSynthCenter);
+                ctx.fillText(iNumber, aPositionArray[iIndex] - FONT_SIZE / 2, iCanvasYSynthCenter);
             });
+            return aPositionArray;
         }
         function getPositionOfNumberArray(aNumberArray, iStartPos, iStep) {
             var aRes = [];
@@ -146,12 +153,26 @@ var AxisGenerator = (function () {
             }
         }
         function drawNumbersLeftToLine(iCanvasXSynthCenter) {
-            drawNumbersVertically(iCanvasXSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE * 2);
+            var aPosArray = drawNumbersVertically(iCanvasXSynthCenter - PADDING_BETWEEN_LINE_AND_NUMBERS - FONT_SIZE * NUMBER_OF_NUMS);
+            drawGridYLines(aPosArray, iCanvasXSynthCenter);
         }
         function drawNumbersRightToLine(iCanvasXSynthCenter) {
-            drawNumbersVertically(iCanvasXSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            var aPosArray = drawNumbersVertically(iCanvasXSynthCenter + PADDING_BETWEEN_LINE_AND_NUMBERS);
+            drawGridYLines(aPosArray, iCanvasXSynthCenter);
         }
-        function drawNumbersVertically(iCanvasYSynthCenter) {
+        function drawGridYLines(aPosArray, iCanvasXSynthCenter) {
+            var ctx = canvas.getContext("2d");
+            var oldStrokeStyle = ctx.fillStyle;
+            ctx.strokeStyle = LINE_COLOR;
+            aPosArray.forEach(function (iPosition) {
+                ctx.beginPath();
+                ctx.moveTo(iCanvasXSynthCenter - 5, iPosition);
+                ctx.lineTo(iCanvasXSynthCenter + 5, iPosition);
+                ctx.stroke();
+            });
+            ctx.strokeStyle = oldStrokeStyle;
+        }
+        function drawNumbersVertically(iCanvasXSynthCenter) {
             var iGetBase = oPlaneDef.yEnd - oPlaneDef.yStart;
             var aNumberArray = getNumberArray(oPlaneDef.yStart, iGetBase);
             var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.yEnd, -oPlaneDef.yStep);
@@ -159,8 +180,21 @@ var AxisGenerator = (function () {
                 var ctx = canvas.getContext("2d");
                 ctx.font = FONT_SIZE + "px Arial";
                 ctx.fillStyle = TEXT_COLOR;
-                ctx.fillText(iNumber, iCanvasYSynthCenter, aPositionArray[iIndex]);
+                ctx.fillText(iNumber, iCanvasXSynthCenter, aPositionArray[iIndex] + FONT_SIZE / 2);
             });
+            return aPositionArray;
+        }
+        function drawGridXLines(aPosArray, iCanvasYSynthCenter) {
+            var ctx = canvas.getContext("2d");
+            var oldStrokeStyle = ctx.fillStyle;
+            ctx.strokeStyle = LINE_COLOR;
+            aPosArray.forEach(function (iPosition) {
+                ctx.beginPath();
+                ctx.moveTo(iPosition, iCanvasYSynthCenter - 5);
+                ctx.lineTo(iPosition, iCanvasYSynthCenter + 5);
+                ctx.stroke();
+            });
+            ctx.strokeStyle = oldStrokeStyle;
         }
         function drawYLine(iCanvasXSynthCenter) {
             var ctx = canvas.getContext("2d");
