@@ -4,6 +4,6 @@
         "**/.git": true,
         "**/.svn": true,
         "**/.DS_Store": true,
-        "**/*.js": { "when": "./ts/$(basename).ts"}
+        "**/*.js": { "when": "$(basename).ts"}
     }
 }
