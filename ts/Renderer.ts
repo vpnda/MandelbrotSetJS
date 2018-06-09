@@ -23,20 +23,23 @@ var Renderer;
 (function () {
     "use strict";
 
+    var oPosnInfo = {
+        start: [0.0, 0.0],
+        end: [0.0, 0,0]
+    };
+    var bChanging = false;
+    var canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    var oPlaneDefinition = new PlaneDefinition(canvas, 0, -2, -1);
 
     function init() {
-        var canvas = document.createElement("canvas");
-        document.body.appendChild(canvas);
         canvas.height = Math.max(document.documentElement.clientHeight, 0);
         canvas.width = Math.max(document.documentElement.clientWidth, 0);
-        var oPlaneDefinition = new PlaneDefinition(canvas, 0, -2, -1);
         var renderPromise = render(canvas, oPlaneDefinition);
-        renderPromise.then(function () {
-            setTimeout(function () {
-                var oPlaneDefinition = new PlaneDefinition(canvas, 70, -0.937, 0.286)
-                render(canvas, oPlaneDefinition);
-            }, 100);
-        })
+        canvas.addEventListener('mousedown', onDocumentMouseDown)
+        canvas.addEventListener('mousemove', onDocumentMouseMove)
+        canvas.addEventListener('mouseup', onDocumentMouseUp)
+        canvas.addEventListener('mousewheel', onDocumentWheelMove)
         return canvas;
     }
 
@@ -47,6 +50,74 @@ var Renderer;
         });
         return oMandelRenderPromise
     }
+
+    function onDocumentMouseDown(event: MouseEvent) {
+        event.preventDefault();
+        // Get mouse position
+        var mouseX = (event.clientX) ;
+        var mouseY = -(event.clientY);
+        oPosnInfo.start = [mouseX, mouseY];
+        oPosnInfo.end = [mouseX, mouseY];
+        bChanging = true;
+    }
+
+    function onDocumentMouseMove(event: MouseEvent) {
+        event.preventDefault();
+        // Get mouse position
+        var mouseX = (event.clientX) ;
+        var mouseY = -(event.clientY) ;
+        if (bChanging) {
+            oPosnInfo.end = [mouseX, mouseY]
+        }
+    }
+
+    function onDocumentMouseUp(event: MouseEvent) {
+        event.preventDefault();
+        if (bChanging) {
+            oPlaneDefinition = new PlaneDefinition(canvas, 
+                oPlaneDefinition.zoomLevel, (oPosnInfo.start[0] - oPosnInfo.end[0]) * oPlaneDefinition.xStep + oPlaneDefinition.xStart , 
+                (oPosnInfo.start[1] - oPosnInfo.end[1]) * oPlaneDefinition.yStep + oPlaneDefinition.yStart);
+            var renderPromise = render(canvas, oPlaneDefinition);
+        }
+    }
+
+    function onDocumentWheelMove(event: WheelEvent) {
+        event.preventDefault();
+        let relCoords = relMouseCoords(event)
+        let fNewScaleFactor = (oPlaneDefinition.zoomLevel - event.deltaY / 100.0)
+        let fRePart = oPlaneDefinition.xStart + oPlaneDefinition.xStep * relCoords.x;
+        let fImmPart = oPlaneDefinition.yStart + oPlaneDefinition.yStep * (canvas.height - relCoords.y) ;
+        let oTmpPlaneDef = new PlaneDefinition(canvas, 
+            fNewScaleFactor, fRePart, fImmPart);
+        let fReNewStart = fRePart - (relCoords.x) * oTmpPlaneDef.xStep;
+        let fImmNewStart = fImmPart - (canvas.height - relCoords.y) * oTmpPlaneDef.yStep;
+        oPlaneDefinition = new PlaneDefinition(canvas, 
+            fNewScaleFactor, fReNewStart, fImmNewStart);
+        console.log("Start: (" + fReNewStart + "," + fImmNewStart + ")" )
+        console.log("(" + oPlaneDefinition.xEnd + "," + oPlaneDefinition.yEnd + ")")
+        render(canvas, oPlaneDefinition)
+        
+    }
+
+    function relMouseCoords(event: MouseEvent){
+        var totalOffsetX = 0;
+        var totalOffsetY = 0;
+        var canvasX = 0;
+        var canvasY = 0;
+        var currentElement: HTMLElement = canvas;
+    
+        do{
+            totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
+            totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
+        }
+        while(currentElement = <HTMLElement> currentElement.offsetParent)
+    
+        canvasX = event.pageX - totalOffsetX;
+        canvasY = event.pageY - totalOffsetY;
+    
+        return {x:canvasX, y:canvasY}
+    }
+    
 
     Renderer = init();
 
