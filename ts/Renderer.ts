@@ -6,7 +6,7 @@ class PlaneDefinition {
     public xStep;
     constructor(canvas: HTMLCanvasElement, public zoomLevel: number, public xStart: number, public yStart: number, public xEnd?, public yEnd?) {
         if (yEnd === undefined) {
-            this.yEnd = (canvas.height / canvas.width ) * 1 / zoomLevel + yStart; 
+            this.yEnd = (canvas.height / canvas.width ) * 1 / (zoomLevel + 0.25) + yStart; 
         }
         this.yStep = (this.yEnd - this.yStart) / canvas.height;
         if (xEnd === undefined) {
@@ -29,7 +29,7 @@ var Renderer;
         document.body.appendChild(canvas);
         canvas.height = Math.max(document.documentElement.clientHeight, 0);
         canvas.width = Math.max(document.documentElement.clientWidth, 0);
-        var oPlaneDefinition = new PlaneDefinition(canvas, 0.25, -2, -1);
+        var oPlaneDefinition = new PlaneDefinition(canvas, 0, -2, -1);
         var renderPromise = render(canvas, oPlaneDefinition);
         renderPromise.then(function () {
             setTimeout(function () {

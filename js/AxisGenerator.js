@@ -1,5 +1,5 @@
-var AxisGenerator = (function () {
-    var LimitType;
+let AxisGenerator = (() => {
+    let LimitType;
     (function (LimitType) {
         LimitType[LimitType["BOTTOM"] = 0] = "BOTTOM";
         LimitType[LimitType["TOP"] = 1] = "TOP";
@@ -10,17 +10,17 @@ var AxisGenerator = (function () {
     /**
      * Border padding settings
      */
-    var LINE_PADDING = 20;
+    let LINE_PADDING = 20;
     /**
      * Line settings
      */
-    var LINE_WIDTH = 2; // px
-    var LINE_COLOR = 'rgb(255,255,255)'; // White color
-    var TEXT_COLOR = 'rgb(255,255,255)'; // White color
-    var PADDING_BETWEEN_LINE_AND_NUMBERS = 5; // px
-    var NUMBER_OF_NUMS = 3;
-    var FONT_SIZE = 15; // px
-    var NUMBER_OF_X_AXIS_STEPS = 10; // number of steps in the X_AXIS
+    let LINE_WIDTH = 2; // px
+    let LINE_COLOR = 'rgb(255,255,255)'; // White color
+    let TEXT_COLOR = 'rgb(255,255,255)'; // White color
+    let PADDING_BETWEEN_LINE_AND_NUMBERS = 5; // px
+    let NUMBER_OF_NUMS = 3;
+    let FONT_SIZE = 15; // px
+    let NUMBER_OF_X_AXIS_STEPS = 10; // number of steps in the X_AXIS
     /**
      * Generates a basic line in the canvas with given a plane definition
      * @param canvas HTMLCanvasElement
@@ -29,7 +29,7 @@ var AxisGenerator = (function () {
      */
     function generate(canvas, oPlaneDef, bAsync) {
         if (bAsync) {
-            setTimeout(function () {
+            setTimeout(() => {
                 _generate(canvas, oPlaneDef);
             });
         }
@@ -82,7 +82,7 @@ var AxisGenerator = (function () {
             var iGetBase = oPlaneDef.xEnd - oPlaneDef.xStart;
             var aNumberArray = getNumberArray(oPlaneDef.xStart, iGetBase);
             var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.xStart, oPlaneDef.xStep);
-            aNumberArray.forEach(function (iNumber, iIndex) {
+            aNumberArray.forEach((iNumber, iIndex) => {
                 var ctx = canvas.getContext("2d");
                 ctx.font = "15px Arial";
                 ctx.fillStyle = TEXT_COLOR;
@@ -92,7 +92,7 @@ var AxisGenerator = (function () {
         }
         function getPositionOfNumberArray(aNumberArray, iStartPos, iStep) {
             var aRes = [];
-            aNumberArray.forEach(function (fNum) {
+            aNumberArray.forEach((fNum) => {
                 aRes.push((fNum - iStartPos) / iStep);
             });
             return aRes;
@@ -104,7 +104,7 @@ var AxisGenerator = (function () {
             var aRes = [];
             for (var i = 0; i < NUMBER_OF_X_AXIS_STEPS; i++) {
                 var adjustedNum = decimalAdjust(ADJUSTMENT_TYPE.round, initalVal, iBase);
-                if (adjustedNum) {
+                if (adjustedNum) { // ignore zero
                     aRes.push(adjustedNum);
                 }
                 initalVal += iInc;
@@ -164,7 +164,7 @@ var AxisGenerator = (function () {
             var ctx = canvas.getContext("2d");
             var oldStrokeStyle = ctx.fillStyle;
             ctx.strokeStyle = LINE_COLOR;
-            aPosArray.forEach(function (iPosition) {
+            aPosArray.forEach((iPosition) => {
                 ctx.beginPath();
                 ctx.moveTo(iCanvasXSynthCenter - 5, iPosition);
                 ctx.lineTo(iCanvasXSynthCenter + 5, iPosition);
@@ -176,7 +176,7 @@ var AxisGenerator = (function () {
             var iGetBase = oPlaneDef.yEnd - oPlaneDef.yStart;
             var aNumberArray = getNumberArray(oPlaneDef.yStart, iGetBase);
             var aPositionArray = getPositionOfNumberArray(aNumberArray, oPlaneDef.yEnd, -oPlaneDef.yStep);
-            aNumberArray.forEach(function (iNumber, iIndex) {
+            aNumberArray.forEach((iNumber, iIndex) => {
                 var ctx = canvas.getContext("2d");
                 ctx.font = FONT_SIZE + "px Arial";
                 ctx.fillStyle = TEXT_COLOR;
@@ -188,7 +188,7 @@ var AxisGenerator = (function () {
             var ctx = canvas.getContext("2d");
             var oldStrokeStyle = ctx.fillStyle;
             ctx.strokeStyle = LINE_COLOR;
-            aPosArray.forEach(function (iPosition) {
+            aPosArray.forEach((iPosition) => {
                 ctx.beginPath();
                 ctx.moveTo(iPosition, iCanvasYSynthCenter - 5);
                 ctx.lineTo(iPosition, iCanvasYSynthCenter + 5);
@@ -229,11 +229,11 @@ var AxisGenerator = (function () {
             };
         }
     }
-    var ADJUSTMENT_TYPE;
+    let ADJUSTMENT_TYPE;
     (function (ADJUSTMENT_TYPE) {
-        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE['ciel'] = 0] = 'ciel';
-        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE['round'] = 1] = 'round';
-        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE['floor'] = 2] = 'floor';
+        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE["ciel"] = 0] = "ciel";
+        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE["round"] = 1] = "round";
+        ADJUSTMENT_TYPE[ADJUSTMENT_TYPE["floor"] = 2] = "floor";
     })(ADJUSTMENT_TYPE || (ADJUSTMENT_TYPE = {}));
     /**
      * Decimal adjustment of a number.

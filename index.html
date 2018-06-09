@@ -1,7 +1,59 @@
 <!DOCTYPE html>
 <html>
 <body style="margin: 0px">
+
+    <script id="2d-vertex-shader" type="notjs">
+
+            // an attribute will receive data from a buffer
+            precision highp float;
+            attribute vec4 a_position;
+            uniform vec4 clip;
+            varying vec2 posn;
+            // all shaders have a main function
+            void main() {
+            
+                // gl_Position is a special variable a vertex shader
+                // is responsible for setting
+                posn = a_position.xy;
+                gl_Position = a_position;
+            }
+            
+    </script>
     
+    <script id="2d-fragment-shader" type="notjs">
+            #define BOUNDARY 2.0
+            #define MAX_ITERATIONS 100
+            // fragment shaders don't have a default precision so we need
+            // to pick one. mediump is a good default
+            precision highp float;
+            uniform vec4 clip;
+            varying vec2 posn;
+
+            float distanceToOrigin(vec2 elem) {
+                return sqrt(dot(elem, elem));
+            }
+            
+            int depth() {
+                vec2 position = vec2(clip.x + (posn.x + 1.0)*clip.z , clip.y + (posn.y + 1.0)*clip.w  ); /* start + dist*step */
+                int iCounter = 0;
+                vec2 oAccum = vec2(0.0, 0.0);
+                for(int i = 0; i < MAX_ITERATIONS; i++) {
+                    if (distanceToOrigin(oAccum) <= BOUNDARY) { 
+                        iCounter++;
+                        oAccum = vec2(oAccum.x*oAccum.x - oAccum.y*oAccum.y + position.x, 2.0 * oAccum.x*oAccum.y + position.y);
+                    }
+                }
+                return iCounter;
+            }
+
+            void main() {
+                // gl_FragColor is a special variable a fragment shader
+                // is responsible for setting
+                float d = float(depth()) / float(MAX_ITERATIONS + 1);
+                gl_FragColor = vec4(0, 0 , d, 1);
+            }
+            
+        </script>
     
     <script src="js/MandelGenerator.js" type="text/javascript"></script>
     <script src="js/AxisGenerator.js" type="text/javascript"></script>
