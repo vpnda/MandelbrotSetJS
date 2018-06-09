@@ -77,7 +77,8 @@ var Renderer;
     function onDocumentWheelMove(event) {
         event.preventDefault();
         let relCoords = relMouseCoords(event);
-        let fNewScaleFactor = (oPlaneDefinition.zoomLevel - event.deltaY / 100.0);
+        console.log("New Scale Factor: " + (oPlaneDefinition.zoomLevel - event.deltaY / 100.0));
+        let fNewScaleFactor = Math.max((oPlaneDefinition.zoomLevel * ((-event.deltaY / 100.0) > 0 ? 1.2 : 0.833)) - event.deltaY / 100.0, 0.0);
         let fRePart = oPlaneDefinition.xStart + oPlaneDefinition.xStep * relCoords.x;
         let fImmPart = oPlaneDefinition.yStart + oPlaneDefinition.yStep * (canvas.height - relCoords.y);
         let oTmpPlaneDef = new PlaneDefinition(canvas, fNewScaleFactor, fRePart, fImmPart);
