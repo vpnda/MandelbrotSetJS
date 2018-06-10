@@ -8,6 +8,7 @@ class PlaneDefinition {
         this.yStart = yStart;
         this.xEnd = xEnd;
         this.yEnd = yEnd;
+        this.iDefinition = 100;
         if (yEnd === undefined) {
             this.yEnd = (canvas.height / canvas.width) * 1 / (zoomLevel + 0.25) + yStart;
         }
@@ -30,22 +31,31 @@ var Renderer;
     };
     var bChanging = false;
     var canvas = document.createElement("canvas");
-    document.body.appendChild(canvas);
-    var oPlaneDefinition = new PlaneDefinition(canvas, 0, -2, -1);
-    function init() {
-        canvas.height = Math.max(document.documentElement.clientHeight, 0);
-        canvas.width = Math.max(document.documentElement.clientWidth, 0);
-        var renderPromise = render(canvas, oPlaneDefinition);
+    var oPlaneDefinition;
+    function init(parentElement = document.body) {
+        // Set the plane defn
+        parentElement.appendChild(canvas);
+        updateCanvasSize();
+        oPlaneDefinition = new PlaneDefinition(canvas, 0, -2, -1);
+        // Initial render & listeners
+        render();
         canvas.addEventListener('mousedown', onDocumentMouseDown);
         canvas.addEventListener('mousemove', onDocumentMouseMove);
         canvas.addEventListener('mouseup', onDocumentMouseUp);
         canvas.addEventListener('mousewheel', onDocumentWheelMove);
-        return canvas;
+        return {
+            render: render,
+            getPlaneDefinition: () => oPlaneDefinition
+        };
     }
-    function render(canvas, oPlaneDefinition) {
-        var oMandelRenderPromise = MandelGenerator.generate(canvas, oPlaneDefinition);
+    function updateCanvasSize() {
+        canvas.height = Math.max(document.documentElement.clientHeight, 0);
+        canvas.width = Math.max(document.documentElement.clientWidth, 0);
+    }
+    function render(customPlaneDefinition = oPlaneDefinition) {
+        var oMandelRenderPromise = MandelGenerator.generate(canvas, customPlaneDefinition);
         oMandelRenderPromise.then(() => {
-            AxisGenerator.generate(canvas, oPlaneDefinition, true);
+            AxisGenerator.generate(canvas, customPlaneDefinition, true);
         });
         return oMandelRenderPromise;
     }
@@ -65,14 +75,18 @@ var Renderer;
         var mouseY = -(event.clientY);
         if (bChanging) {
             oPosnInfo.end = [mouseX, mouseY];
+            var customPlaneDefn = new PlaneDefinition(canvas, oPlaneDefinition.zoomLevel, (oPosnInfo.start[0] - oPosnInfo.end[0]) * oPlaneDefinition.xStep + oPlaneDefinition.xStart, (oPosnInfo.start[1] - oPosnInfo.end[1]) * oPlaneDefinition.yStep + oPlaneDefinition.yStart);
+            customPlaneDefn.iDefinition = 25;
+            render(customPlaneDefn);
         }
     }
     function onDocumentMouseUp(event) {
         event.preventDefault();
         if (bChanging) {
             oPlaneDefinition = new PlaneDefinition(canvas, oPlaneDefinition.zoomLevel, (oPosnInfo.start[0] - oPosnInfo.end[0]) * oPlaneDefinition.xStep + oPlaneDefinition.xStart, (oPosnInfo.start[1] - oPosnInfo.end[1]) * oPlaneDefinition.yStep + oPlaneDefinition.yStart);
-            var renderPromise = render(canvas, oPlaneDefinition);
+            var renderPromise = render();
         }
+        bChanging = false;
     }
     function onDocumentWheelMove(event) {
         event.preventDefault();
@@ -85,9 +99,11 @@ var Renderer;
         let fReNewStart = fRePart - (relCoords.x) * oTmpPlaneDef.xStep;
         let fImmNewStart = fImmPart - (canvas.height - relCoords.y) * oTmpPlaneDef.yStep;
         oPlaneDefinition = new PlaneDefinition(canvas, fNewScaleFactor, fReNewStart, fImmNewStart);
-        console.log("Start: (" + fReNewStart + "," + fImmNewStart + ")");
-        console.log("(" + oPlaneDefinition.xEnd + "," + oPlaneDefinition.yEnd + ")");
-        render(canvas, oPlaneDefinition);
+        render();
+    }
+    function onScreenResize() {
+        updateCanvasSize();
+        render();
     }
     function relMouseCoords(event) {
         var totalOffsetX = 0;
@@ -103,5 +119,9 @@ var Renderer;
         canvasY = event.pageY - totalOffsetY;
         return { x: canvasX, y: canvasY };
     }
-    Renderer = init();
+    window.addEventListener("resize", onScreenResize);
+    Renderer = init;
 })();
+window.onload = (ev) => {
+    Renderer();
+};

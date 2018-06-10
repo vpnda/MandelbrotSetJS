@@ -4,6 +4,7 @@
 class PlaneDefinition {
     public yStep;
     public xStep;
+    public iDefinition = 100;
     constructor(canvas: HTMLCanvasElement, public zoomLevel: number, public xStart: number, public yStart: number, public xEnd?, public yEnd?) {
         if (yEnd === undefined) {
             this.yEnd = (canvas.height / canvas.width ) * 1 / (zoomLevel + 0.25) + yStart; 
@@ -29,24 +30,36 @@ var Renderer;
     };
     var bChanging = false;
     var canvas = document.createElement("canvas");
-    document.body.appendChild(canvas);
-    var oPlaneDefinition = new PlaneDefinition(canvas, 0, -2, -1);
+    var oPlaneDefinition;
 
-    function init() {
-        canvas.height = Math.max(document.documentElement.clientHeight, 0);
-        canvas.width = Math.max(document.documentElement.clientWidth, 0);
-        var renderPromise = render(canvas, oPlaneDefinition);
+    function init(parentElement: HTMLElement = document.body) {
+        // Set the plane defn
+        parentElement.appendChild(canvas);
+        updateCanvasSize();
+        oPlaneDefinition = new PlaneDefinition(canvas, 0, -2, -1)
+
+        // Initial render & listeners
+        render();
         canvas.addEventListener('mousedown', onDocumentMouseDown)
         canvas.addEventListener('mousemove', onDocumentMouseMove)
         canvas.addEventListener('mouseup', onDocumentMouseUp)
         canvas.addEventListener('mousewheel', onDocumentWheelMove)
-        return canvas;
+
+        return {
+            render: render,
+            getPlaneDefinition: () => oPlaneDefinition
+        }
     }
 
-    function render(canvas, oPlaneDefinition) {
-        var oMandelRenderPromise = MandelGenerator.generate(canvas, oPlaneDefinition);
+    function updateCanvasSize() {
+        canvas.height = Math.max(document.documentElement.clientHeight, 0);
+        canvas.width = Math.max(document.documentElement.clientWidth, 0);
+    }
+
+    function render(customPlaneDefinition: PlaneDefinition = oPlaneDefinition) {
+        var oMandelRenderPromise = MandelGenerator.generate(canvas, customPlaneDefinition);
         oMandelRenderPromise.then(() => {
-            AxisGenerator.generate(canvas, oPlaneDefinition, true);
+            AxisGenerator.generate(canvas, customPlaneDefinition, true);
         });
         return oMandelRenderPromise
     }
@@ -68,6 +81,11 @@ var Renderer;
         var mouseY = -(event.clientY) ;
         if (bChanging) {
             oPosnInfo.end = [mouseX, mouseY]
+            var customPlaneDefn = new PlaneDefinition(canvas, 
+                oPlaneDefinition.zoomLevel, (oPosnInfo.start[0] - oPosnInfo.end[0]) * oPlaneDefinition.xStep + oPlaneDefinition.xStart , 
+                (oPosnInfo.start[1] - oPosnInfo.end[1]) * oPlaneDefinition.yStep + oPlaneDefinition.yStart);
+            customPlaneDefn.iDefinition = 25;
+            render(customPlaneDefn);
         }
     }
 
@@ -77,8 +95,9 @@ var Renderer;
             oPlaneDefinition = new PlaneDefinition(canvas, 
                 oPlaneDefinition.zoomLevel, (oPosnInfo.start[0] - oPosnInfo.end[0]) * oPlaneDefinition.xStep + oPlaneDefinition.xStart , 
                 (oPosnInfo.start[1] - oPosnInfo.end[1]) * oPlaneDefinition.yStep + oPlaneDefinition.yStart);
-            var renderPromise = render(canvas, oPlaneDefinition);
+            var renderPromise = render();
         }
+        bChanging = false;
     }
 
     function onDocumentWheelMove(event: WheelEvent) {
@@ -95,10 +114,13 @@ var Renderer;
         let fImmNewStart = fImmPart - (canvas.height - relCoords.y) * oTmpPlaneDef.yStep;
         oPlaneDefinition = new PlaneDefinition(canvas, 
             fNewScaleFactor, fReNewStart, fImmNewStart);
-        console.log("Start: (" + fReNewStart + "," + fImmNewStart + ")" )
-        console.log("(" + oPlaneDefinition.xEnd + "," + oPlaneDefinition.yEnd + ")")
-        render(canvas, oPlaneDefinition)
+        render()
         
+    }
+
+    function onScreenResize(){
+        updateCanvasSize();
+        render()
     }
 
     function relMouseCoords(event: MouseEvent){
@@ -119,8 +141,13 @@ var Renderer;
     
         return {x:canvasX, y:canvasY}
     }
-    
 
-    Renderer = init();
+    window.addEventListener("resize", onScreenResize)
+
+    Renderer = init
 
 })();
+
+window.onload = (ev: Event) => {
+    Renderer()
+}

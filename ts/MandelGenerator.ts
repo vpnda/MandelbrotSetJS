@@ -42,7 +42,8 @@ let MandelGenerator = (() => {
             
             // Get the strings for our GLSL shaders
             var vertexShaderSource = (<HTMLScriptElement> document.getElementById("2d-vertex-shader")).text;
-            var fragmentShaderSource = (<HTMLScriptElement> document.getElementById("2d-fragment-shader")).text;
+            var fragmentShaderSource = (<HTMLScriptElement> document.getElementById("2d-fragment-shader"))
+                                            .text.replace(/MAX_ITERATIONS\ ([0-9]*)/, "MAX_ITERATIONS " + oPlaneDef.iDefinition);
             
             // create GLSL shaders, upload the GLSL source, compile the shaders
             var vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
